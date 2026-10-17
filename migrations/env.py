@@ -13,6 +13,7 @@ from shared.database import Base
 from modules.appointments import models as appointment_models
 from modules.doctors import models as doctor_models
 from modules.patients import models as patient_models
+from modules.auth import models as auth_models
 
 config = context.config
 
