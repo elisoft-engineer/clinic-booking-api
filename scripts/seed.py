@@ -10,6 +10,8 @@ from datetime import time
 from sqlalchemy import select
 
 from core.database import SessionFactory, engine
+
+# import all models to ensure all data types of tables are recognized
 from modules.appointments import models as appointment_models
 from modules.auth import models as auth_models
 from modules.doctors import models as doctor_models
@@ -40,7 +42,7 @@ async def seed(session_factory=SessionFactory, *, dispose_engine: bool = True) -
                     session.add(doctor)
                     await session.flush()
 
-                # Do not overwrite custom schedules that already exist.
+                # do not overwrite custom schedules that already exist.
                 for weekday in range(5):  # Monday=0 through Friday=4
                     has_hours = await session.scalar(
                         select(doctor_models.DoctorWorkingHour.id)
