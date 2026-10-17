@@ -63,7 +63,7 @@ class DoctorService:
         for interval in intervals:
             cursor = datetime.combine(target_date, interval.start_time, tzinfo=zone)
             end = datetime.combine(target_date, interval.end_time, tzinfo=zone)
-            # Slots begin on the clinic clock's :00 or :30 boundaries.
+            # appointments must begin on the clinic clock's 0 or 30 minute.
             if cursor.minute not in (0, 30) or cursor.second or cursor.microsecond:
                 if cursor.minute < 30:
                     cursor = cursor.replace(minute=30, second=0, microsecond=0)
