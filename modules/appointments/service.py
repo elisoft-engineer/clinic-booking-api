@@ -62,7 +62,10 @@ class AppointmentService:
         appointment.status = AppointmentStatus.CANCELLED.value
         appointment.cancellation_reason = data.reason
         appointment.cancelled_at = datetime.now(UTC)
+
         await session.flush()
+        await session.refresh(appointment)
+
         return appointment
 
     async def reschedule(
@@ -91,6 +94,7 @@ class AppointmentService:
         appointment.ends_at = starts_at + SLOT_DURATION
         try:
             await session.flush()
+            await session.refresh(appointment)
         except IntegrityError as exc:
             raise ConflictError("That appointment slot has just been booked.") from exc
         return appointment
