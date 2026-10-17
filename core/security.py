@@ -1,4 +1,6 @@
 from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from secrets import token_urlsafe
 from typing import Any
 from uuid import UUID
 
@@ -45,7 +47,7 @@ def decode_access_token(token: str) -> UUID:
             token,
             settings.secret_key.get_secret_value(),
             algorithms=[settings.algorithm],
-            options={"require": ["sub", "exp", "iat"]},
+            options={"require": ["sub", "exp", "iat", "type"]},
         )
         if payload.get("type") != "access":
             raise AuthenticationError("Invalid access token.")
@@ -54,3 +56,12 @@ def decode_access_token(token: str) -> UUID:
         raise
     except (jwt.InvalidTokenError, ValueError, TypeError, KeyError) as exc:
         raise AuthenticationError("Invalid or expired access token.") from exc
+
+
+def create_refresh_token() -> str:
+    """Create a high-entropy opaque refresh token; only its hash is stored."""
+    return token_urlsafe(48)
+
+
+def hash_refresh_token(token: str) -> str:
+    return sha256(token.encode("utf-8")).hexdigest()
