@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     algorithm: str = "HS256"
     access_token_lifetime_minutes: int = Field(default=30, ge=1, le=1440)
+    refresh_token_lifetime_days: int = Field(default=7, ge=1, le=90)
 
     timezone: str = "Africa/Nairobi"
     cors_origins: list[str] = Field(default_factory=list)
@@ -33,7 +34,6 @@ class Settings(BaseSettings):
             ZoneInfo(value)
         except ZoneInfoNotFoundError as exc:
             raise ValueError(f"Unknown IANA timezone: {value}") from exc
-
         return value
 
     @property
