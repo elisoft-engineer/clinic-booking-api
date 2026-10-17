@@ -1,5 +1,6 @@
-"""Seed a small set of doctors and weekday working hours.
+"""Idempotently seed doctors and their weekday working hours.
 
+Existing doctors are also repaired when they are missing working-hour rows.
 Run with: poetry run python -m scripts.seed
 """
 
@@ -9,8 +10,8 @@ from datetime import time
 from sqlalchemy import select
 
 from core.database import SessionFactory, engine
-from core.database import SessionFactory, engine
 from modules.appointments import models as appointment_models
+from modules.auth import models as auth_models
 from modules.doctors import models as doctor_models
 from modules.patients import models as patient_models
 
@@ -23,8 +24,8 @@ DOCTORS = [
 ]
 
 
-async def seed() -> None:
-    async with SessionFactory() as session:
+async def seed(session_factory=SessionFactory, *, dispose_engine: bool = True) -> None:
+    async with session_factory() as session:
         async with session.begin():
             for name, specialization in DOCTORS:
                 doctor = await session.scalar(
@@ -38,25 +39,28 @@ async def seed() -> None:
                     )
                     session.add(doctor)
                     await session.flush()
-                    # Monday-Friday, 09:00-17:00; slots are 30 minutes.
-                    for weekday in range(5):
-                        existing_hours = await session.scalar(
-                            select(doctor_models.DoctorWorkingHour).where(
-                                doctor_models.DoctorWorkingHour.doctor_id == doctor.id,
-                                doctor_models.DoctorWorkingHour.weekday == weekday,
+
+                # Do not overwrite custom schedules that already exist.
+                for weekday in range(5):  # Monday=0 through Friday=4
+                    has_hours = await session.scalar(
+                        select(doctor_models.DoctorWorkingHour.id)
+                        .where(
+                            doctor_models.DoctorWorkingHour.doctor_id == doctor.id,
+                            doctor_models.DoctorWorkingHour.weekday == weekday,
+                        )
+                        .limit(1)
+                    )
+                    if has_hours is None:
+                        session.add(
+                            doctor_models.DoctorWorkingHour(
+                                doctor_id=doctor.id,
+                                weekday=weekday,
+                                start_time=time(9, 0),
+                                end_time=time(17, 0),
                             )
                         )
-
-                        if existing_hours is None:
-                            session.add(
-                                doctor_models.DoctorWorkingHour(
-                                    doctor_id=doctor.id,
-                                    weekday=weekday,
-                                    start_time=time(9, 0),
-                                    end_time=time(17, 0),
-                                )
-                            )
-    await engine.dispose()
+    if dispose_engine:
+        await engine.dispose()
 
 
 if __name__ == "__main__":
