@@ -3,7 +3,6 @@ from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.dependencies import DatabaseSession
 from modules.doctors.schemas import AvailabilitySlot, DoctorRead
