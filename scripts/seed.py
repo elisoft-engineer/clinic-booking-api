@@ -9,8 +9,10 @@ from datetime import time
 from sqlalchemy import select
 
 from core.database import SessionFactory, engine
-from modules.appointments.models import Appointment
-from modules.doctors.models import Doctor, DoctorWorkingHour
+from core.database import SessionFactory, engine
+from modules.appointments import models as appointment_models
+from modules.doctors import models as doctor_models
+from modules.patients import models as patient_models
 
 DOCTORS = [
     ("Dr. Amina Wanjiku", "General Practice"),
@@ -26,24 +28,28 @@ async def seed() -> None:
         async with session.begin():
             for name, specialization in DOCTORS:
                 doctor = await session.scalar(
-                    select(Doctor).where(Doctor.full_name == name)
+                    select(doctor_models.Doctor).where(
+                        doctor_models.Doctor.full_name == name
+                    )
                 )
                 if doctor is None:
-                    doctor = Doctor(full_name=name, specialization=specialization)
+                    doctor = doctor_models.Doctor(
+                        full_name=name, specialization=specialization
+                    )
                     session.add(doctor)
                     await session.flush()
                     # Monday-Friday, 09:00-17:00; slots are 30 minutes.
                     for weekday in range(5):
                         existing_hours = await session.scalar(
-                            select(DoctorWorkingHour).where(
-                                DoctorWorkingHour.doctor_id == doctor.id,
-                                DoctorWorkingHour.weekday == weekday,
+                            select(doctor_models.DoctorWorkingHour).where(
+                                doctor_models.DoctorWorkingHour.doctor_id == doctor.id,
+                                doctor_models.DoctorWorkingHour.weekday == weekday,
                             )
                         )
 
                         if existing_hours is None:
                             session.add(
-                                DoctorWorkingHour(
+                                doctor_models.DoctorWorkingHour(
                                     doctor_id=doctor.id,
                                     weekday=weekday,
                                     start_time=time(9, 0),
