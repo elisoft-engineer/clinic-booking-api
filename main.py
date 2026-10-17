@@ -30,7 +30,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
 app = FastAPI(
     title=settings.app_name,
     description="A clinic appointment booking API with patient authentication and transactional booking workflows.",
-    version="1.0.0",
+    version="0.1.0",
     debug=settings.debug,
     lifespan=lifespan,
 )
