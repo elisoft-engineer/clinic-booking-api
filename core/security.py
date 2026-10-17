@@ -59,9 +59,12 @@ def decode_access_token(token: str) -> UUID:
 
 
 def create_refresh_token() -> str:
-    """Create a high-entropy opaque refresh token; only its hash is stored."""
     return token_urlsafe(48)
 
 
 def hash_refresh_token(token: str) -> str:
+    """
+    Create a hash for a refresh token.
+    Only its hash is exchanged on requests, providing more security.
+    """
     return sha256(token.encode("utf-8")).hexdigest()

@@ -1,5 +1,5 @@
 class DomainError(Exception):
-    """Base class for expected application/domain errors."""
+    """Base class for expected application errors."""
 
     status_code = 400
     code = "domain_error"

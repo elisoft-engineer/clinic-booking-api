@@ -25,7 +25,7 @@ from modules.patients.models import Patient
 
 
 def _utc(value: datetime) -> datetime:
-    """Normalize SQLite's naive datetimes and database-aware datetimes to UTC."""
+    """Normalize naive datetimes to UTC."""
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
@@ -80,7 +80,7 @@ class AuthService:
         if patient is None or not patient.is_active:
             raise AccountStateError("This patient account is inactive.")
 
-        # Rotate tokens on every refresh: the old token cannot be used again.
+        # Make it such that the old token cannot be used again.
         stored.revoked_at = now
         await session.flush()
         return await self._token_response(session, patient)
@@ -93,7 +93,7 @@ class AuthService:
             .where(RefreshToken.token_hash == hash_refresh_token(data.refresh_token))
             .with_for_update()
         )
-        # Idempotent response avoids disclosing whether a token exists.
+        # revoke the refresh token
         if stored is not None and stored.revoked_at is None:
             stored.revoked_at = datetime.now(UTC)
             await session.flush()

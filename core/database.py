@@ -21,8 +21,9 @@ SessionFactory = async_sessionmaker(
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     """Yield a request-scoped session and transaction.
 
-    All routes, services, or repositories share the transaction of the request.
-    A successful request commits while one that raises exception escaping the request rolls back.
+    All activities involved in a request are treated as a single transaction
+    such that if any operation fails, all prior ones within the request are
+    rolled back, therefore ensuring ATOMICITY.
     """
     async with SessionFactory() as session:
         async with session.begin():

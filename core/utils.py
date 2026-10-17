@@ -13,6 +13,7 @@ async def domain_error_handler(
     _: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Exception handler for application errors"""
     exc = cast(DomainError, exc)
 
     return JSONResponse(
@@ -30,6 +31,7 @@ async def integrity_error_handler(
     _: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Exception handler for database constraints violation"""
     exc = cast(IntegrityError, exc)
 
     original = getattr(exc, "orig", None)
@@ -79,6 +81,7 @@ async def database_error_handler(
     _: Request,
     exc: Exception,
 ) -> JSONResponse:
+    """Exception handler for DB related errors"""
     exc = cast(SQLAlchemyError, exc)
 
     logger.exception("Database operation failed")

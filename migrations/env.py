@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 from core.config import settings
 from shared.database import Base
 
-# model imports
+# import all models for Base.metadata tracking by alembic
 from modules.appointments import models as appointment_models
 from modules.doctors import models as doctor_models
 from modules.patients import models as patient_models

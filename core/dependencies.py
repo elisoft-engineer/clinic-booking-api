@@ -28,5 +28,7 @@ async def get_current_patient(
     return patient
 
 
+# The following ensure that we dont have to repeat the deps calls and
+# therefore cleaner code
 CurrentPatient = Annotated[Patient, Depends(get_current_patient)]
 DatabaseSession = Annotated[AsyncSession, Depends(get_db)]

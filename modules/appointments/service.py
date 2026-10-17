@@ -137,7 +137,6 @@ class AppointmentService:
             )
         )
         if result is None:
-            # Avoid disclosing whether another patient's appointment exists.
             raise NotFoundError("Appointment not found.")
         return result
 
