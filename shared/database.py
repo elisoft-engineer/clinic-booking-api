@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Annotated
 from uuid import UUID
 
@@ -24,7 +24,7 @@ updated_at_type = Annotated[
         DateTime(timezone=True),
         nullable=False,
         server_default=func.now(),
-        onupdate=lambda: datetime.now(UTC),
+        onupdate=func.now(),
     ),
 ]
 
@@ -40,15 +40,8 @@ class UUIDPrimaryKeyMixin:
 
 
 class TimestampMixin:
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False, server_default=func.now()
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True),
-        nullable=False,
-        server_default=func.now(),
-        onupdate=lambda: datetime.now(UTC),
-    )
+    created_at: Mapped[created_at_type]
+    updated_at: Mapped[updated_at_type]
 
 
 class BaseModel(Base, UUIDPrimaryKeyMixin, TimestampMixin):
