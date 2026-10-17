@@ -1,6 +1,7 @@
-from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 from typing import Annotated
 from uuid import UUID
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 Password = Annotated[str, StringConstraints(min_length=10, max_length=128)]
 FullName = Annotated[
@@ -32,6 +33,16 @@ class PatientRead(BaseModel):
 
 class TokenResponse(BaseModel):
     access_token: str
+    refresh_token: str
     token_type: str = "bearer"
     expires_in: int
+    refresh_expires_in: int
     patient: PatientRead
+
+
+class RefreshTokenRequest(BaseModel):
+    refresh_token: str = Field(min_length=20, max_length=512)
+
+
+class LogoutResponse(BaseModel):
+    status: str = "logged_out"
