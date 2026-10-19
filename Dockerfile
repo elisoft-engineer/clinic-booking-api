@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PIP_NO_CACHE_DIR=1
 
 WORKDIR /build
-ARG POETRY_VERSION=2.2.1
+ARG POETRY_VERSION=2.3.4
 RUN pip install --no-cache-dir "poetry==${POETRY_VERSION}"
 
 COPY pyproject.toml poetry.lock ./
