@@ -1,0 +1,9 @@
+services:
+  api:
+    image: ghcr.io/elisoft-engineer/clinic-booking:latest
+    container_name: clinic-booking-api
+    env_file:
+      - ./.env.prod
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
