@@ -1,11 +1,12 @@
-from datetime import date, timedelta
+from datetime import date, datetime, time, timedelta
+from zoneinfo import ZoneInfo
 
 import pytest
 from httpx import AsyncClient
 from sqlalchemy import select
 
 from modules.doctors.models import Doctor, DoctorWorkingHour
-from scripts.seed import DOCTORS, seed
+from scripts.seed import DOCTORS, WORKING_INTERVALS, seed
 
 
 @pytest.mark.asyncio
@@ -25,11 +26,15 @@ async def test_seed_repairs_working_hours_for_existing_doctors(
 
     async with session_factory() as session:
         rows = await session.scalars(
-            select(DoctorWorkingHour).where(DoctorWorkingHour.doctor_id == doctor_id)
+            select(DoctorWorkingHour)
+            .where(DoctorWorkingHour.doctor_id == doctor_id)
+            .order_by(DoctorWorkingHour.weekday, DoctorWorkingHour.start_time)
         )
         hours = list(rows.all())
-    assert len(hours) == 5
+
+    assert len(hours) == 10
     assert {row.weekday for row in hours} == {0, 1, 2, 3, 4}
+    assert {(row.start_time, row.end_time) for row in hours} == set(WORKING_INTERVALS)
 
     # Pick a future weekday; weekend dates intentionally have no seeded schedule.
     target = date.today() + timedelta(days=1)
@@ -40,3 +45,16 @@ async def test_seed_repairs_working_hours_for_existing_doctors(
     )
     assert response.status_code == 200, response.text
     assert len(response.json()) > 0
+    # No generated appointment slot should overlap the lunch hour.
+    clinic_zone = ZoneInfo("Africa/Nairobi")
+    assert all(
+        not (
+            time(13, 0)
+            <= datetime.fromisoformat(item["starts_at"])
+            .astimezone(clinic_zone)
+            .time()
+            .replace(tzinfo=None)
+            < time(14, 0)
+        )
+        for item in response.json()
+    )
