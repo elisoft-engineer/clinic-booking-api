@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/elisoft-engineer/clinic-booking:latest
+    image: ghcr.io/elisoft-engineer/clinic-booking-api:latest
     container_name: clinic-booking-api
     env_file:
       - ./.env.prod
