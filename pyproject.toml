@@ -34,3 +34,6 @@ dev = [
     "aiosqlite (>=0.22.1,<0.23.0)",
     "alchemist-shell (>=0.1.13,<0.2.0)"
 ]
+
+[tool.poetry]
+package-mode = false
