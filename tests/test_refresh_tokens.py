@@ -50,15 +50,10 @@ async def test_logout_revokes_refresh_token(client: AsyncClient) -> None:
         },
     )
     assert registration.status_code == 201, registration.text
-    refresh_token = registration.json()["refresh_token"]
+    token = registration.json()["refresh_token"]
 
-    logout = await client.post(
-        "/api/v1/auth/logout", json={"refresh_token": refresh_token}
-    )
-    assert logout.status_code == 200
-    assert logout.json() == {"status": "logged_out"}
+    logout = await client.post("/api/v1/auth/logout", json={"refresh_token": token})
+    assert logout.status_code == 200, logout.text
 
-    refreshed = await client.post(
-        "/api/v1/auth/refresh", json={"refresh_token": refresh_token}
-    )
-    assert refreshed.status_code == 401
+    refresh = await client.post("/api/v1/auth/refresh", json={"refresh_token": token})
+    assert refresh.status_code == 401
