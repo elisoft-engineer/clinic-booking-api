@@ -5,9 +5,9 @@ async ORM, and **Alembic**. It supports patient authentication, doctor
 discovery, availability lookup, and appointment booking, cancellation,
 and rescheduling.
 
-The focus is not just getting the endpoints to work. The implementation
-is organized around clear module boundaries, request-level transaction
-consistency, and database constraints that help protect booking
+I wanted this to be more than an API where the endpoints simply work. I
+organized the implementation around clear module boundaries, request-level
+transaction consistency, and database constraints that help protect booking
 integrity when requests arrive concurrently.
 
 ## Contents
@@ -26,6 +26,7 @@ integrity when requests arrive concurrently.
 - [Availability and booking rules](#availability-and-booking-rules)
 - [AI-assisted development](#ai-assisted-development)
 - [Docker image](#docker-image)
+- [License](#license)
 
 ## Why this stack
 
@@ -37,11 +38,11 @@ without tightly coupling the application to the framework.
 
 Django and Go are both strong options, depending on the context. Django
 is particularly useful when a project benefits from its integrated ORM,
-admin, and broader batteries-included convention. Go is a strong choice
+admin, and broader batteries-included conventions. Go is a strong choice
 for teams that want a compiled language, straightforward deployment, and
-efficient concurrency. For this assessment, FastAPI offered a practical
-balance of development speed, async support, low framework overhead,
-and architectural flexibility.
+efficient concurrency. For this assessment, I found that FastAPI offered a
+practical balance of development speed, async support, low framework
+overhead, and architectural flexibility.
 
 ## What it supports
 
@@ -62,8 +63,9 @@ and architectural flexibility.
 
 ## Architecture
 
-The codebase uses a **layered, modular design**. Each feature is grouped
-by domain, while responsibilities remain separated within that feature.
+I organized the codebase around a **layered, modular design**. Each feature
+is grouped by domain, while responsibilities remain separated within that
+feature.
 
 ```text
 .
@@ -100,9 +102,9 @@ Schemas define the input and output contracts. Shared configuration,
 authentication helpers, dependencies, exception types, and logging live
 in `core/` so that feature modules do not need to reimplement them.
 
-This separation makes things easier to locate and test, and it makes the
-project scalable by avoiding concentration of all logic in route handlers
-or one large service.
+I find this separation makes the code easier to locate and test. It also
+gives the project room to grow without concentrating all the logic in route
+handlers or one large service.
 
 ## Key engineering decisions
 
@@ -116,8 +118,8 @@ I chose this because a request may need to coordinate more than one
 service operation. If each operation is committed independently, an
 operation might remain committed even if a another one failed. A
 request-level transaction keeps those database changes atomic such
-that successful requests commit, while if there's an exception the
-transaction rolls back.
+that successful requests commit, while an exception causes the
+transaction to roll back.
 
 Services can flush when they need the database to evaluate pending
 changes or constraints, but they do not independently decide the
@@ -125,11 +127,10 @@ request's commit boundary.
 
 ### Database constraints protect booking integrity
 
-The application checks that a requested slot is valid, falls within the
-doctor's working hours, meets the advance-booking cutoff (of 1 hour), and does not
-overlap an existing booked appointment. The database adds a partial
-unique index for a doctor's booked appointment start time, and checks
-on appointment status and start/end ordering.
+The API validates each requested slot against the doctor's working hours, the
+one-hour advance-booking cutoff, and existing appointments. The database
+adds a partial unique index for a doctor's booked appointment start time,
+along with checks on appointment status and start/end ordering.
 
 The application and database checks serve different purposes.
 Application validation provides clear domain errors while database
@@ -152,30 +153,30 @@ expiry and an explicit token type.
 
 ### Availability is computed in the clinic's time zone
 
-Availability is based on each doctor's configured working hours and
-existing booked appointments. The algorithm creates 30-minute slots on
-the clinic clock, converts slot times to UTC for comparisons and API
-output, excludes already-booked slots, and omits slots that begin within
-the one-hour booking cutoff.
+The API calculates availability from each doctor's configured working hours and
+existing booked appointments. The logic creates 30-minute slots on the
+clinic clock, converts slot times to UTC for comparisons and API output,
+excludes already-booked slots, and omits slots that begin within the
+one-hour booking cutoff.
 
 The clinic time zone is configurable and has a default value of `Africa/Nairobi`.
-Keeping the clinic's local schedule separate from UTC timestamps and this avoids
+Keeping the clinic's local schedule separate from UTC timestamps. This avoids
 treating a clinic's opening hours as if they were UTC hours.
 
 ### Annotated dependencies reduce repetition
 
-Common dependencies such as the current authenticated patient and
-database session are exposed as annotated types. Route dependecy injenction stay
-concise, while authentication and session lifecycle remain defined
-globally.
+I exposed common dependencies, such as the current authenticated patient
+and database session, as annotated types. This keeps route dependency
+injection concise while leaving authentication and session lifecycle
+defined centrally.
 
 ### Centralized exception handling
 
-Expected domain errors share a common base class and are handled at
+I handled expected domain errors through a common base class at the
 application level. Database integrity and SQLAlchemy errors also have
-centralized handlers. This keeps routes focused on the request rather
-than repeating `try/except` and response formatting. This gives
-clients a consistent error structure.
+centralized handlers. This keeps the routes focused on the request instead
+of repeating `try/except` blocks and response formatting, and gives clients
+a consistent error structure.
 
 ## Requirements
 
@@ -280,11 +281,11 @@ Run the test suite:
 poetry run pytest
 ```
 
-Tests use an isolated async SQLite database by default
-(`test_clinic.db`) and override the application's database dependency.
-You can set `TEST_DATABASE_URL` to point tests at another suitable test
+I configured the tests to use an isolated async SQLite database by default
+(`test_clinic.db`) and to override the application's database dependency.
+You can set `TEST_DATABASE_URL` to point the tests at another suitable test
 database. **Do not point tests at a database containing data you need to keep**
-because the test drops and recreates the tables.
+because the test suite drops and recreates the tables.
 
 ## Configuration
 
@@ -464,47 +465,47 @@ clients.
 
 ## Where AI assisted in development
 
-AI was used as a development aid, not as a substitute for engineering
-judgment. It was particularly useful in three areas:
+I used AI as a development aid, not as a substitute for my own engineering
+judgment. It was particularly useful to me in three areas:
 
-- **Exception handling:** It helped in shaping a global exception-handling
-  convention that is registered on the FastAPI application, thereby replacing repeated
-  error handling boilerplate with a consistent response
-  contract.
-- **Availability logic:** It also gave good insight into generating and
-  filtering of 30-minute availability slots, as well as UTC conversion.
-- **Seed data and tests:** It sped up the creation of
-  sample data and automated tests.
+- **Exception handling:** AI helped me think through a global
+  exception-handling convention that is registered on the FastAPI application.
+  This replaced repeated error-handling boilerplate with a consistent
+  response schema.
+- **Availability logic:** AI also helped me explore how to generate and
+  filter 30-minute availability slots and handle UTC conversion.
+- **Seed data and tests:** AI helped speed up work on sample data and
+  automated tests.
 
 I reviewed the suggestions and made the architectural decisions based on
-the requirements. One explicit point of disagreement was **Transaction Ownership**:
-AI suggested that service methods manage transactions
-themselves. I decided to make transaction ownership request-scoped instead,
-because it gives a single request one atomic
-transaction even when the route runs multiple service operations.
-That choice is intentional and crucial for consistency.
+the requirements. One point where I took a different approach was
+**transaction ownership**. AI suggested that service methods manage their
+own transactions. I chose request-scoped transaction ownership instead,
+so a single request has one atomic transaction even when a route runs
+multiple service operations. That was a deliberate decision to keep the
+data consistent.
 
 ## Docker configuration
 
-The project includes Docker configuration and CI/CD to build and publish
-a container image. Using the published image gives development, testing,
-and deployment environments the same dependencies, reducing differences
-caused by local setup. The CI workflow rebuilds and publishes the image
-when it's configured trigger runs. Use the image reference published by the
-repository's workflow when deploying and keep environment-specific settings
-such as `DATABASE_URL` and `SECRET_KEY` outside the image and provide them
-at runtime.
+I included Docker configuration and CI/CD to build and publish a
+container image. Using the published image gives development, testing, and
+deployment environments the same dependencies, reducing differences caused
+by local setup. The CI workflow rebuilds and publishes the image when its
+configured trigger runs. When deploying, use the image reference published
+by the repository's workflow. Keep environment-specific settings such as
+`DATABASE_URL` and `SECRET_KEY` outside the image and provide them at runtime.
 
 ## Production database setup
 
-For production, database migrations and seed data are run deliberately rather
-than running them when the API starts. Both utilities ask for the database
-URL at the terminal, so it does not need to be written into the Docker image.
+For production, I ran database migrations and seed data deliberately rather
+than having them run automatically when the API starts. Both utilities ask
+for the database URL in the terminal, so I do not need to put it in the
+Docker image.
 
 ### Applying online migrations
 
-After checking out the version of the code you intend to deploy, you should
-run the migration utility from the project root:
+After checking out the version of the code I intended to deploy, I ran the
+migration utility from the project root:
 
 ```bash
 poetry run python -m scripts.production_migrate
@@ -526,7 +527,7 @@ plan to deploy.
 
 ### Seeding production data
 
-Production seed data can be initialized separately:
+One can initialize production seed data separately:
 
 ```bash
 poetry run python -m scripts.production_seed
@@ -536,10 +537,18 @@ Enter the target PostgreSQL URL and type `SEED` after checking the displayed
 host and database name. The utility reuses the project's existing seed logic
 instead of maintaining a second copy of the doctor and working-hour definitions.
 
-The seed data provides sample doctors with weekday working hours from 09:00 to
-13:00 and 14:00 to 17:00, in the clinic's configured time zone. The seed logic
+The seed data adds sample doctors with weekday working hours from 09:00 to
+13:00 and 14:00 to 17:00 in the clinic's configured time zone. The seed logic
 preserves existing weekday schedules.
 
-Apply migrations before seeding. Production seeding is an explicit initialization
-step and should not run automatically whenever the API starts. Keep database
-credentials out of source control and never bake them into the Docker image.
+One must apply migrations before seeding. Production seeding is an explicit
+initialization step, not something that should run automatically whenever
+the API starts. They must also keep database credentials out of source control
+and never include them into the Docker image.
+
+## License
+
+I have licensed this project under the **BSD 3-Clause License**. The full
+license terms are available in the [`LICENSE`](LICENSE) file in the root
+directory of this repository. If you use or fork this project, please read
+the license and follow its terms.
