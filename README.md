@@ -233,10 +233,9 @@ for local use, for example:
 poetry run python -c "import secrets; print(secrets.token_urlsafe(48))"
 ```
 
-Do not commit a real `.env` file or production secrets. Keep
-`DEBUG=false` in production and configure `CORS_ORIGINS` for the exact
-browser origins that should be allowed. For PostgreSQL, use the async
-SQLAlchemy URL form, for example
+Keep `DEBUG=false` in production and configure `CORS_ORIGINS` for the
+exact browser origins that should be allowed. For PostgreSQL, use the
+async SQLAlchemy URL form, for example
 `postgresql+asyncpg://user:password@localhost:5432/clinic_booking`.
 
 ### 3. Apply migrations
@@ -480,32 +479,50 @@ judgment. It was particularly useful in three areas:
 I reviewed the suggestions and made the architectural decisions based on
 the requirements. One explicit point of disagreement was **Transaction Ownership**:
 AI suggested that service methods manage transactions
-themselves. I kept decided to make transaction ownership request-scoped instead,
+themselves. I decided to make transaction ownership request-scoped instead,
 because it gives a single request one atomic
-transaction even when the route coordinates multiple service operations.
-That choice is intentional and central to the project's consistency model.
+transaction even when the route runs multiple service operations.
+That choice is intentional and crucial for consistency.
 
 ## Docker configuration
 
-The project includes Docker configuration and CI/CD to build and publish a container image. Using the published image gives development, testing, and deployment environments the same packaged application and dependency set, reducing differences caused by local setup. The CI workflow rebuilds and publishes the image when its configured trigger runs. Use the image reference published by the repository's workflow when deploying; keep environment-specific settings such as `DATABASE_URL` and `SECRET_KEY` outside the image and provide them at runtime.
+The project includes Docker configuration and CI/CD to build and publish
+a container image. Using the published image gives development, testing,
+and deployment environments the same dependencies, reducing differences
+caused by local setup. The CI workflow rebuilds and publishes the image
+when it's configured trigger runs. Use the image reference published by the
+repository's workflow when deploying and keep environment-specific settings
+such as `DATABASE_URL` and `SECRET_KEY` outside the image and provide them
+at runtime.
 
 ## Production database setup
 
-For production, database migrations and seed data are run deliberately rather than when the API starts. Both utilities ask for the database URL at the terminal, so it does not need to be committed to the repository or written into the Docker image.
+For production, database migrations and seed data are run deliberately rather
+than running them when the API starts. Both utilities ask for the database
+URL at the terminal, so it does not need to be written into the Docker image.
 
 ### Applying online migrations
 
-After checking out the version of the code you intend to deploy, run the migration utility from the project root:
+After checking out the version of the code you intend to deploy, you should
+run the migration utility from the project root:
 
 ```bash
 poetry run python -m scripts.production_migrate
 ```
 
-Enter the PostgreSQL URL for the production database when prompted, then check the displayed host and database name. Type `MIGRATE` to apply the pending Alembic migrations. The utility runs `alembic upgrade head` against that database and does not deploy or restart the API.
+Enter the PostgreSQL URL for the production database when prompted, then check
+the displayed host and database name. Type `MIGRATE` to apply the pending
+Alembic migrations. The utility runs `alembic upgrade head` against that database
+and does not deploy or restart the API.
 
-The script accepts `postgresql://` and `postgresql+asyncpg://` URLs. It uses the async PostgreSQL driver configured by the application. The database must accept connections from the machine running the command; depending on the provider, that may require IP allowlisting or SSL configuration.
+The script accepts `postgresql://` and `postgresql+asyncpg://` URLs. It uses the
+async PostgreSQL driver configured by the application. The database must accept
+connections from the machine running the command. Depending on the provider, that
+may require IP allowlisting or SSL configuration.
 
-Review pending migration files and back up important production data before applying schema changes. Run migrations using the same code revision that you plan to deploy.
+Review pending migration files and back up important production data before
+applying schema changes. Run migrations using the same code revision that you
+plan to deploy.
 
 ### Seeding production data
 
@@ -515,8 +532,14 @@ Production seed data can be initialized separately:
 poetry run python -m scripts.production_seed
 ```
 
-Enter the target PostgreSQL URL and type `SEED` after checking the displayed host and database name. The utility reuses the project's existing seed logic instead of maintaining a second copy of the doctor and working-hour definitions.
+Enter the target PostgreSQL URL and type `SEED` after checking the displayed
+host and database name. The utility reuses the project's existing seed logic
+instead of maintaining a second copy of the doctor and working-hour definitions.
 
-The seed data provides sample doctors with weekday working hours from 09:00 to 12:00 and 13:00 to 17:00, in the clinic's configured time zone. The seed logic preserves existing weekday schedules. If a database was previously seeded with continuous 09:00–17:00 hours, running the script will not automatically replace those records with the lunch-break schedule; review and update those records deliberately if needed.
+The seed data provides sample doctors with weekday working hours from 09:00 to
+13:00 and 14:00 to 17:00, in the clinic's configured time zone. The seed logic
+preserves existing weekday schedules.
 
-Apply migrations before seeding. Production seeding is an explicit initialization step and should not run automatically whenever the API starts. Keep database credentials out of source control and never bake them into the Docker image.
+Apply migrations before seeding. Production seeding is an explicit initialization
+step and should not run automatically whenever the API starts. Keep database
+credentials out of source control and never bake them into the Docker image.
