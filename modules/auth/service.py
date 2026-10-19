@@ -15,8 +15,8 @@ from core.security import (
 from modules.auth.models import RefreshToken
 from modules.auth.schemas import (
     LogoutResponse,
-    PatientLogin,
     PatientRead,
+    PatientLogin,
     PatientRegister,
     RefreshTokenRequest,
     TokenResponse,
@@ -25,7 +25,7 @@ from modules.patients.models import Patient
 
 
 def _utc(value: datetime) -> datetime:
-    """Normalize naive datetimes to UTC."""
+    """Normalize naive datetimes to UTC, or convert aware datetimes to UTC."""
     return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
 
 
@@ -80,7 +80,7 @@ class AuthService:
         if patient is None or not patient.is_active:
             raise AccountStateError("This patient account is inactive.")
 
-        # Make it such that the old token cannot be used again.
+        # Revoke the old token before issuing a replacement in this transaction.
         stored.revoked_at = now
         await session.flush()
         return await self._token_response(session, patient)
@@ -93,7 +93,6 @@ class AuthService:
             .where(RefreshToken.token_hash == hash_refresh_token(data.refresh_token))
             .with_for_update()
         )
-        # revoke the refresh token
         if stored is not None and stored.revoked_at is None:
             stored.revoked_at = datetime.now(UTC)
             await session.flush()
@@ -102,10 +101,10 @@ class AuthService:
     async def _token_response(
         self, session: AsyncSession, patient: Patient
     ) -> TokenResponse:
+        now = datetime.now(UTC)
         refresh_token = create_refresh_token()
-        refresh_expires_at = datetime.now(UTC) + timedelta(
-            days=settings.refresh_token_lifetime_days
-        )
+        refresh_expires_at = now + timedelta(days=settings.refresh_token_lifetime_days)
+
         session.add(
             RefreshToken(
                 token_hash=hash_refresh_token(refresh_token),
@@ -114,6 +113,7 @@ class AuthService:
             )
         )
         await session.flush()
+
         return TokenResponse(
             access_token=create_access_token(patient.id),
             refresh_token=refresh_token,
