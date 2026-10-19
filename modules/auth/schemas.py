@@ -3,7 +3,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
-Password = Annotated[str, StringConstraints(min_length=10, max_length=128)]
+Password = Annotated[str, StringConstraints(min_length=8, max_length=128)]
 FullName = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=2, max_length=120)
 ]
