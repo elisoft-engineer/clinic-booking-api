@@ -25,7 +25,7 @@ integrity when requests arrive concurrently.
 - [API reference](#api-reference)
 - [Availability and booking rules](#availability-and-booking-rules)
 - [AI-assisted development](#ai-assisted-development)
-- [Possible next steps](#possible-next-steps)
+- [Docker image](#docker-image)
 
 ## Why this stack
 
@@ -57,7 +57,8 @@ and architectural flexibility.
   cancelled appointments.
 - Centralized, consistent error responses.
 - Database migrations and sample seed data.
-- Automated asynchronous API tests that can be ran with pytest.
+- Automated asynchronous API tests that can be run with pytest.
+- Docker configuration and CI/CD that build and publish a container image for consistent deployments.
 
 ## Architecture
 
@@ -290,33 +291,18 @@ because the test drops and recreates the tables.
 
 ---
 
-Variable Purpose Default
-
----
-
-`APP_NAME` API title `Clinic Booking API`
-
-`APP_ENV` Environment label `development`
-
-`DEBUG` Enables debug logging `false`
-and more diagnostic  
- database error messages
-
-`DATABASE_URL` SQLAlchemy async Required
-database URL
-
-`SECRET_KEY` Secret used to sign Required
-access tokens
-
-`ALGORITHM` JWT signing algorithm `HS256`
-
-`ACCESS_TOKEN_LIFETIME_MINUTES` Access-token lifetime `30`
-
-`REFRESH_TOKEN_LIFETIME_DAYS` Refresh-token lifetime `7`
-
-`TIMEZONE` IANA clinic time zone `Africa/Nairobi`
-
-`CORS_ORIGINS` Allowed browser origins `[]`
+| Variable                        | Purpose                                                           | Default              |
+| ------------------------------- | ----------------------------------------------------------------- | -------------------- |
+| `APP_NAME`                      | API title                                                         | `Clinic Booking API` |
+| `APP_ENV`                       | Environment label                                                 | `development`        |
+| `DEBUG`                         | Enables debug logging and more diagnostic database error messages | `false`              |
+| `DATABASE_URL`                  | SQLAlchemy async database URL                                     | Required             |
+| `SECRET_KEY`                    | Secret used to sign access tokens                                 | Required             |
+| `ALGORITHM`                     | JWT signing algorithm                                             | `HS256`              |
+| `ACCESS_TOKEN_LIFETIME_MINUTES` | Access-token lifetime                                             | `30`                 |
+| `REFRESH_TOKEN_LIFETIME_DAYS`   | Refresh-token lifetime                                            | `7`                  |
+| `TIMEZONE`                      | IANA clinic time zone                                             | `Africa/Nairobi`     |
+| `CORS_ORIGINS`                  | Allowed browser origins                                           | `[]`                 |
 
 ---
 
@@ -331,41 +317,20 @@ interactive reference.
 
 ### Operations
 
-Method Endpoint Purpose Auth
-
----
-
-`GET` `/health` Health check No
-`GET` `/` Basic API information and docs path No
+| Method | Endpoint  | Purpose                       | Auth |
+| ------ | --------- | ----------------------------- | ---- |
+| `GET`  | `/health` | Health check                  | No   |
+| `GET`  | `/docs`   | API information and Docs path | No   |
 
 ### Authentication
 
----
-
-Method Endpoint Purpose Auth
-
----
-
-`POST` `/api/v1/auth/register` Register a No
-patient and issue
-tokens
-
-`POST` `/api/v1/auth/login` Authenticate with No
-email and  
- password
-
-`POST` `/api/v1/auth/refresh` Rotate refresh No
-token and issue  
- new tokens
-
-`POST` `/api/v1/auth/logout` Revoke a refresh No
-token
-
-`GET` `/api/v1/auth/me` Get the Bearer access
-authenticated token
-patient
-
----
+| Method | Endpoint                | Purpose                                     | Auth                |
+| ------ | ----------------------- | ------------------------------------------- | ------------------- |
+| `POST` | `/api/v1/auth/register` | Register a patient and issue tokens         | No                  |
+| `POST` | `/api/v1/auth/login`    | Authenticate with email and password        | No                  |
+| `POST` | `/api/v1/auth/refresh`  | Rotate a refresh token and issue new tokens | No                  |
+| `POST` | `/api/v1/auth/logout`   | Revoke a refresh token                      | No                  |
+| `GET`  | `/api/v1/auth/me`       | Get the authenticated patient               | Bearer access token |
 
 Example registration request:
 
@@ -378,36 +343,30 @@ Example registration request:
 }
 ```
 
-The phone field is optional. Use the `access_token` as
-`Authorization: Bearer <access_token>` for protected endpoints. Keep the
-refresh token secure and use it only with the refresh and logout
-endpoints.
+The phone field is optional. The response includes an `access_token` and a `refresh_token`.
+
+To test protected endpoints in Swagger UI:
+
+1. Open `/docs` and register or log in using the authentication endpoints.
+2. Copy the `access_token` value from the response (not the refresh token).
+3. Click **Authorize** near the top of the Swagger page.
+4. Paste the access token into the HTTP Bearer value field. Enter the token itself; Swagger UI adds the `Bearer` prefix.
+5. Click **Authorize**, close the dialog, and try an endpoint marked as requiring a bearer access token.
+
+Access tokens are short-lived. Use the refresh endpoint with the refresh token to obtain a new token pair. Keep the refresh token secure and use it only with the refresh and logout endpoints.
 
 ### Doctors and availability
 
----
-
-Method Endpoint Purpose Auth
-
----
-
-`GET` `/api/v1/doctors` List active No
-doctors
-
-`GET` `/api/v1/doctors/{doctor_id}` Get an active No
-doctor
-
-`GET` `/api/v1/doctors/{doctor_id}/availability?date=YYYY-MM-DD` Get available No
-30-minute slots  
- for a  
- clinic-local date
-
----
+| Method | Endpoint                                                   | Purpose                                                | Auth |
+| ------ | ---------------------------------------------------------- | ------------------------------------------------------ | ---- |
+| `GET`  | `/api/v1/doctors`                                          | List active doctors                                    | No   |
+| `GET`  | `/api/v1/doctors/{doctor_id}`                              | Get an active doctor                                   | No   |
+| `GET`  | `/api/v1/doctors/{doctor_id}/availability?date=YYYY-MM-DD` | List available 30-minute slots for a clinic-local date | No   |
 
 Example:
 
 ```bash
-curl "http://127.0.0.1:8000/api/v1/doctors/DOCTOR_UUID/availability?date=2026-10-19"
+curl "http://127.0.0.1:8000/api/v1/doctors/DOCTOR_UUID/availability?date=2026-10-22"
 ```
 
 Availability returns a list of `starts_at` and `ends_at` timestamps.
@@ -416,29 +375,15 @@ date in the clinic's configured time zone.
 
 ### Appointments
 
-All appointment endpoints require a valid bearer access token and
-operate on the authenticated patient's own appointments.
+All appointment endpoints require a valid bearer access token and operate on the authenticated patient's own appointments.
 
----
-
-Method Endpoint Purpose
-
----
-
-`POST` `/api/v1/appointments` Book an appointment
-
-`GET` `/api/v1/appointments/{appointment_id}` Retrieve one of the
-patient's appointments
-
-`PATCH` `/api/v1/appointments/{appointment_id}/cancel` Cancel an appointment
-
-`PATCH` `/api/v1/appointments/{appointment_id}/reschedule` Reschedule an
-appointment
-
-`GET` `/api/v1/patients/{patient_id}/appointments?upcoming=true` List the authenticated
-patient's appointments
-
----
+| Method  | Endpoint                                                   | Purpose                                       | Auth                |
+| ------- | ---------------------------------------------------------- | --------------------------------------------- | ------------------- |
+| `POST`  | `/api/v1/appointments`                                     | Book an appointment                           | Bearer access token |
+| `GET`   | `/api/v1/appointments/{appointment_id}`                    | Retrieve one of the patient's appointments    | Bearer access token |
+| `PATCH` | `/api/v1/appointments/{appointment_id}/cancel`             | Cancel an appointment                         | Bearer access token |
+| `PATCH` | `/api/v1/appointments/{appointment_id}/reschedule`         | Reschedule an appointment                     | Bearer access token |
+| `GET`   | `/api/v1/patients/{patient_id}/appointments?upcoming=true` | List the authenticated patient's appointments | Bearer access token |
 
 Example booking request:
 
@@ -540,11 +485,6 @@ because it gives a single request one atomic
 transaction even when the route coordinates multiple service operations.
 That choice is intentional and central to the project's consistency model.
 
-## Possible next steps
+## Docker image
 
-For a production deployment, useful follow-ups would include CI checks,
-structured request/correlation IDs, rate limiting on authentication
-endpoints, operational metrics, backups and restore drills, and testing
-concurrency against the chosen production database. Any production
-rollout should also review token transport/storage, secret rotation,
-database permissions, and deployment-specific CORS settings.
+The project includes Docker configuration and CI/CD to build and publish a container image. Using the published image gives development, testing, and deployment environments the same packaged application and dependency set, reducing differences caused by local setup. The CI workflow rebuilds and publishes the image when its configured trigger runs. Use the image reference published by the repository's workflow when deploying; keep environment-specific settings such as `DATABASE_URL` and `SECRET_KEY` outside the image and provide them at runtime.
